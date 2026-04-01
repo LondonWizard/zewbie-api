@@ -1,75 +1,168 @@
 # Zewbie Universal API
 
-NestJS-based multi-tenant e-commerce platform API. Manages stores, catalogs, orders, payments, shipping, analytics, and administration for the Zewbie marketplace.
+Backend for the **Zewbie** multi-tenant e-commerce platform: **NestJS 11**, **Prisma 7**, and **PostgreSQL**. It powers creator stores, retailer tooling, catalog, orders, payments, shipping, analytics, admin operations, and integrations.
 
-## Architecture
+## API documentation
 
-**Runtime:** Node.js + NestJS 11  
-**ORM:** Prisma 7 (PostgreSQL)  
-**Databases:** Primary (transactional), Analytics, Audit (planned)  
-**Docs:** Swagger at `/api/docs`
+Interactive **OpenAPI (Swagger)** UI is served at:
 
-### Module Map
+**`/api/docs`** — e.g. `http://localhost:3000/api/docs` after you start the server.
 
-| Module | Prefix | Purpose |
-|---|---|---|
-| `auth` | `/auth` | Registration, login, JWT, 2FA, social auth |
-| `users` | `/users` | User profile, password, notifications |
-| `stores` | `/stores` | Store CRUD, pages, themes, domains, publishing |
-| `storefront` | `/storefront` | Public store rendering, cart, checkout |
-| `catalog` | `/catalog` | Product browsing, categories, search |
-| `retailers` | `/retailers` | Retailer dashboard: products, inventory, orders, payouts |
-| `orders` | `/orders` | Order management and tracking |
-| `payments` | `/payments` | Stripe checkout, webhooks, payment methods |
-| `shipping` | `/shipping` | Rates, labels, tracking, carriers |
-| `media` | `/media` | File uploads (S3) |
-| `integrations` | `/integrations` | Third-party connections, social posting |
-| `analytics` | `/analytics` | Sales, traffic, product, customer analytics |
-| `admin` | `/admin` | User/retailer/catalog/order/finance administration |
-| `notifications` | `/notifications` | In-app notifications and preferences |
-| `webhooks` | `/webhooks` | Outbound webhook management |
-| `system` | `/system` | Health checks, status, version |
+## Quick start
 
-### Key Files
+Prerequisites: **Node.js** (LTS), **npm**, **Docker** (for local databases), and optionally the **[zewbie-infra](https://github.com/zewbie/zewbie-infra)** repo for the full local stack.
 
-- `prisma/schema.prisma` — Database models (User, Store, Product, Order, Payment, etc.)
-- `prisma/prisma.config.ts` — Prisma 7 datasource configuration
-- `src/config/configuration.ts` — Centralised env var loading
-- `src/prisma/` — Global PrismaService singleton
-- `src/app.module.ts` — Root module importing all feature modules
-- `src/main.ts` — Bootstrap with CORS, helmet, compression, validation, Swagger
-
-## Setup
-
-```bash
-# Install dependencies
+```powershell
+git clone https://github.com/zewbie/zewbie-api.git
+cd zewbie-api
 npm install
+copy .env.example .env
+```
 
-# Copy env template and fill in values
-cp .env.example .env
+Start PostgreSQL (three instances), Redis, and optional local AWS/search services using Docker Compose from **zewbie-infra**:
 
-# Generate Prisma client
+```powershell
+cd C:\Users\londo\Documents\GitHub\zewbie-infra\docker
+docker compose up -d
+cd C:\Users\londo\Documents\GitHub\zewbie-api
+```
+
+Align connection strings in `.env` with your Compose defaults (see **Environment variables**). Then:
+
+```powershell
 npx prisma generate
-
-# Run database migrations (requires running PostgreSQL)
-npx prisma migrate dev
-
-# Start development server
 npm run start:dev
 ```
 
-The API starts on `http://localhost:3000` with Swagger docs at `http://localhost:3000/api/docs`.
+The API listens on **`http://localhost:3000`** (or `PORT` from `.env`). Run migrations when you are ready to evolve the schema:
 
-## Environment Variables
+```powershell
+npx prisma migrate dev
+```
 
-See `.env.example` for the full list. Key variables:
+## Architecture overview
 
-- `DATABASE_URL` — PostgreSQL connection string
-- `JWT_SECRET` — Token signing key
-- `STRIPE_SECRET_KEY` — Stripe payments
-- `AWS_S3_BUCKET` — Media storage
-- `PORT` — Server port (default 3000)
+- **Framework:** NestJS with global validation (`ValidationPipe`), **helmet**, **compression**, **CORS**, and **@nestjs/throttler** rate limiting.
+- **Persistence:** Prisma ORM; configuration in `prisma/` and `src/prisma/`.
+- **Config:** `src/config/configuration.ts` maps environment variables into a typed config object.
+- **Scale:** **16 feature modules** plus **Prisma** infrastructure, exposing **155+ HTTP routes** (handlers on controllers; see Swagger for the live list).
 
-## Current State
+```text
+Client / frontends
+        │
+        ▼
+   NestJS API (CORS, validation, throttling)
+        │
+        ├──► PostgreSQL (primary) ── Prisma
+        ├──► PostgreSQL (analytics) — optional dedicated DB
+        ├──► PostgreSQL (audit) — optional dedicated DB
+        ├──► Redis (cache / sessions)
+        └──► External: Stripe, S3, SMTP, Clerk, etc.
+```
 
-All 155+ routes are scaffolded with placeholder responses returning `{ message, status: "not_implemented" }`. The Prisma schema defines 10 production-ready models. Implementation of business logic, auth guards, and integrations is the next phase.
+## Module list
+
+Each module owns a URL prefix (see `@Controller` in each `*.controller.ts`). Prisma is global infrastructure, not a route prefix.
+
+| Module | Prefix | Description |
+|--------|--------|-------------|
+| **Auth** | `/auth` | Registration (user + retailer), login, refresh, logout, password reset, email verification, 2FA, social auth, admin login. |
+| **Users** | `/users` | Current user profile, password, notifications, activity. |
+| **Stores** | `/stores` | Creator store CRUD, pages, theme, navigation, domain, publish, preview. |
+| **Storefront** | `/storefront` | Public store by slug: pages, products, cart, checkout, order return. |
+| **Catalog** | `/catalog` | Public product listing, categories, search, featured products. |
+| **Retailers** | `/retailers` | Retailer-scoped `me/*` APIs: products, inventory, orders, payouts, shipping settings. |
+| **Orders** | `/orders` | Order listing, detail, cancel, tracking, stats. |
+| **Payments** | `/payments` | Checkout, Stripe webhook, saved payment methods. |
+| **Shipping** | `/shipping` | Rates, labels, tracking, carriers. |
+| **Media** | `/media` | Uploads, bulk upload, file metadata, delete, “my files”. |
+| **Integrations** | `/integrations` | Connect/callback/disconnect/status per provider; social post and analytics helpers. |
+| **Analytics** | `/analytics` | Sales, traffic, products, customers, overview. |
+| **Admin** | `/admin` | Platform admin: users, retailers, catalog moderation, orders, disputes, finances, settings, audit log. |
+| **Notifications** | `/notifications` | In-app notifications and read/settings endpoints. |
+| **Webhooks** | `/webhooks` | Outbound webhook CRUD and delivery logs. |
+| **System** | `/system` | Health, status, version. |
+
+**Prisma** (`src/prisma/`) provides `PrismaService` to all modules.
+
+## Environment variables
+
+Copy `.env.example` to `.env` and set values for your environment. Reference:
+
+| Variable | Purpose |
+|----------|---------|
+| `DATABASE_URL` | Primary PostgreSQL connection string. |
+| `ANALYTICS_DATABASE_URL` | Analytics PostgreSQL instance (optional / multi-DB). |
+| `AUDIT_DATABASE_URL` | Audit PostgreSQL instance (optional / multi-DB). |
+| `REDIS_URL` | Redis for cache/sessions (default `redis://localhost:6379`). |
+| `JWT_SECRET` | Signing key for JWTs. |
+| `JWT_EXPIRY` | Access token lifetime (e.g. `15m`). |
+| `JWT_REFRESH_EXPIRY` | Refresh token lifetime (e.g. `7d`). |
+| `CLERK_SECRET_KEY` | Clerk server secret (if using Clerk). |
+| `STRIPE_SECRET_KEY` | Stripe API secret. |
+| `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret. |
+| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | AWS credentials for S3 (and related). |
+| `AWS_REGION` | AWS region (default `us-east-1`). |
+| `AWS_S3_BUCKET` | Media bucket name. |
+| `PORT` | HTTP port (default `3000`). |
+| `NODE_ENV` | `development` / `production`, etc. |
+| `FRONTEND_URL` | CORS origin for browser clients. |
+| `API_VERSION` | Shown in Swagger metadata. |
+| `SMTP_*` / `EMAIL_FROM` | Outbound email. |
+| `THROTTLE_TTL` / `THROTTLE_LIMIT` | Rate limit window and max requests. |
+
+## Database architecture (three PostgreSQL instances)
+
+Zewbie separates concerns across **three logical PostgreSQL databases**:
+
+1. **Primary** — transactional core (users, stores, products, orders, etc.) via `DATABASE_URL`.
+2. **Analytics** — reporting-friendly or high-volume analytics data via `ANALYTICS_DATABASE_URL`.
+3. **Audit** — append-heavy audit trails via `AUDIT_DATABASE_URL`.
+
+Local development typically runs all three via **zewbie-infra** `docker/docker-compose.yml` (primary, analytics, audit containers on ports **5432**, **5433**, **5434**). Ensure database names and credentials in `.env` match your Compose file.
+
+## Development workflow
+
+1. **Branch** from `main` for features or fixes.
+2. **Run dependencies** — Docker Compose from zewbie-infra for Postgres/Redis (and optional LocalStack/OpenSearch).
+3. **Schema changes** — edit `prisma/schema.prisma`, then `npx prisma migrate dev` (or `db push` for throwaway local DBs).
+4. **Client** — `npx prisma generate` after schema changes.
+5. **Serve** — `npm run start:dev` (watch mode).
+6. **Lint / test** — `npm run lint`, `npm run test`, `npm run test:e2e` as needed.
+7. **API exploration** — use `/api/docs` for request/response shapes.
+
+See **CONTRIBUTING.md** for branching, commits, and review expectations.
+
+## Deployment
+
+Typical production layout (see **zewbie-infra** for Terraform):
+
+1. **Build** — `npm run build` → `dist/`.
+2. **Run** — `npm run start:prod` (or `node dist/main`) on the host or in a container.
+3. **Migrations** — `npx prisma migrate deploy` against the primary database (CI/CD or release step).
+4. **Secrets** — inject all `.env` values via your platform (ECS task definitions, Parameter Store, Secrets Manager, etc.).
+5. **Networking** — place the API behind an **ALB** with TLS; restrict **CORS** `FRONTEND_URL` to real portal origins.
+6. **Observability** — health checks can target `/system/health` (and related system routes).
+
+## Key files
+
+| Path | Role |
+|------|------|
+| `src/main.ts` | Bootstrap, Swagger at `api/docs`, global pipes and middleware. |
+| `src/app.module.ts` | Root module wiring all feature modules. |
+| `src/config/configuration.ts` | Environment → config object. |
+| `prisma/schema.prisma` | Data models. |
+| `.env.example` | Documented environment template. |
+
+## Current implementation note
+
+Many handlers are scaffolded to return structured placeholders (e.g. `not_implemented`) while the route surface and Prisma models are stabilized. Implement services, guards, and integrations incrementally; use Swagger as the contract checklist.
+
+## Related repositories
+
+- **zewbie-admin**, **zewbie-app**, **zewbie-retailer** — React frontends.
+- **zewbie-infra** — Docker Compose for local stack; Terraform for AWS.
+
+## License
+
+Private / UNLICENSED (see `package.json`).
