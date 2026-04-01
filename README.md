@@ -10,10 +10,10 @@ Interactive **OpenAPI (Swagger)** UI is served at:
 
 ## Quick start
 
-Prerequisites: **Node.js** (LTS), **npm**, **Docker** (for local databases), and optionally the **[zewbie-infra](https://github.com/zewbie/zewbie-infra)** repo for the full local stack.
+Prerequisites: **Node.js** (LTS), **npm**, **Docker** (for local databases), and the **zewbie-infra** repository for the full local Docker stack.
 
 ```powershell
-git clone https://github.com/zewbie/zewbie-api.git
+git clone <repository-url>
 cd zewbie-api
 npm install
 copy .env.example .env

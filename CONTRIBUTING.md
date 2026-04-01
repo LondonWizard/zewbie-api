@@ -5,13 +5,13 @@ Thanks for helping improve the Zewbie API. This document explains how we work on
 ## Prerequisites
 
 - Node.js (LTS) and npm
-- Docker (for local PostgreSQL/Redis via [zewbie-infra](https://github.com/zewbie/zewbie-infra))
+- Docker (for local PostgreSQL/Redis via the **zewbie-infra** repo)
 - Git
 
 ## Getting set up
 
 ```powershell
-git clone https://github.com/zewbie/zewbie-api.git
+git clone <repository-url>
 cd zewbie-api
 npm install
 copy .env.example .env
