@@ -1,39 +1,41 @@
-import { Controller, Get, Param } from '@nestjs/common';
+import { Controller, Get, Param, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { CatalogService } from './catalog.service';
+import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
+import { Public } from '../common/decorators/public.decorator';
+import { SearchProductsSchema } from './dto/catalog.dto';
+import type { SearchProductsDto } from './dto/catalog.dto';
 
 @ApiTags('Catalog')
+@Public()
 @Controller('catalog')
 export class CatalogController {
   constructor(private readonly catalogService: CatalogService) {}
 
   @Get('products')
-  getProducts() {
-    return { message: 'GET /catalog/products - placeholder', status: 'not_implemented' };
+  getProducts(
+    @Query(new ZodValidationPipe(SearchProductsSchema)) query: SearchProductsDto,
+  ) {
+    return this.catalogService.search(query);
   }
 
   @Get('products/:id')
   getProduct(@Param('id') id: string) {
-    return { message: `GET /catalog/products/${id} - placeholder`, status: 'not_implemented' };
+    return this.catalogService.findOne(id);
+  }
+
+  @Get('products/slug/:slug')
+  getProductBySlug(@Param('slug') slug: string) {
+    return this.catalogService.findBySlug(slug);
   }
 
   @Get('categories')
   getCategories() {
-    return { message: 'GET /catalog/categories - placeholder', status: 'not_implemented' };
-  }
-
-  @Get('categories/:id')
-  getCategory(@Param('id') id: string) {
-    return { message: `GET /catalog/categories/${id} - placeholder`, status: 'not_implemented' };
-  }
-
-  @Get('search')
-  search() {
-    return { message: 'GET /catalog/search - placeholder', status: 'not_implemented' };
+    return this.catalogService.getCategories();
   }
 
   @Get('featured')
   getFeatured() {
-    return { message: 'GET /catalog/featured - placeholder', status: 'not_implemented' };
+    return this.catalogService.getFeatured();
   }
 }

@@ -1,79 +1,66 @@
-import { Controller, Post, Param } from '@nestjs/common';
+import { Controller, Post, Body, UsePipes } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
+import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
+import { Public } from '../common/decorators/public.decorator';
+import {
+  RegisterSchema,
+  RegisterRetailerSchema,
+  LoginSchema,
+  ForgotPasswordSchema,
+  ResetPasswordSchema,
+} from './dto/auth.dto';
+import type {
+  RegisterDto,
+  RegisterRetailerDto,
+  LoginDto,
+  ForgotPasswordDto,
+  ResetPasswordDto,
+} from './dto/auth.dto';
 
 @ApiTags('Auth')
+@Public()
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
-  register() {
-    return { message: 'POST /auth/register - placeholder', status: 'not_implemented' };
+  @UsePipes(new ZodValidationPipe(RegisterSchema))
+  register(@Body() body: RegisterDto) {
+    return this.authService.register(body);
   }
 
   @Post('register/retailer')
-  registerRetailer() {
-    return { message: 'POST /auth/register/retailer - placeholder', status: 'not_implemented' };
+  @UsePipes(new ZodValidationPipe(RegisterRetailerSchema))
+  registerRetailer(@Body() body: RegisterRetailerDto) {
+    return this.authService.registerRetailer(body);
   }
 
   @Post('login')
-  login() {
-    return { message: 'POST /auth/login - placeholder', status: 'not_implemented' };
+  @UsePipes(new ZodValidationPipe(LoginSchema))
+  login(@Body() body: LoginDto) {
+    return this.authService.login(body);
+  }
+
+  @Post('forgot-password')
+  @UsePipes(new ZodValidationPipe(ForgotPasswordSchema))
+  forgotPassword(@Body() body: ForgotPasswordDto) {
+    return this.authService.forgotPassword(body.email);
+  }
+
+  @Post('reset-password')
+  @UsePipes(new ZodValidationPipe(ResetPasswordSchema))
+  resetPassword(@Body() body: ResetPasswordDto) {
+    return this.authService.resetPassword(body.token, body.password);
   }
 
   @Post('refresh')
   refresh() {
-    return { message: 'POST /auth/refresh - placeholder', status: 'not_implemented' };
+    return { message: 'Token refresh will be handled by Clerk in Phase 1C' };
   }
 
   @Post('logout')
   logout() {
-    return { message: 'POST /auth/logout - placeholder', status: 'not_implemented' };
-  }
-
-  @Post('forgot-password')
-  forgotPassword() {
-    return { message: 'POST /auth/forgot-password - placeholder', status: 'not_implemented' };
-  }
-
-  @Post('reset-password')
-  resetPassword() {
-    return { message: 'POST /auth/reset-password - placeholder', status: 'not_implemented' };
-  }
-
-  @Post('verify-email')
-  verifyEmail() {
-    return { message: 'POST /auth/verify-email - placeholder', status: 'not_implemented' };
-  }
-
-  @Post('resend-verification')
-  resendVerification() {
-    return { message: 'POST /auth/resend-verification - placeholder', status: 'not_implemented' };
-  }
-
-  @Post('social/:provider')
-  socialAuth(@Param('provider') provider: string) {
-    return { message: `POST /auth/social/${provider} - placeholder`, status: 'not_implemented' };
-  }
-
-  @Post('2fa/enable')
-  enable2fa() {
-    return { message: 'POST /auth/2fa/enable - placeholder', status: 'not_implemented' };
-  }
-
-  @Post('2fa/verify')
-  verify2fa() {
-    return { message: 'POST /auth/2fa/verify - placeholder', status: 'not_implemented' };
-  }
-
-  @Post('2fa/disable')
-  disable2fa() {
-    return { message: 'POST /auth/2fa/disable - placeholder', status: 'not_implemented' };
-  }
-
-  @Post('admin/login')
-  adminLogin() {
-    return { message: 'POST /auth/admin/login - placeholder', status: 'not_implemented' };
+    return { message: 'Logout will be handled by Clerk in Phase 1C' };
   }
 }

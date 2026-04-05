@@ -2,8 +2,10 @@ import { Controller, Get } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { HealthCheck } from '@nestjs/terminus';
 import { SystemService } from './system.service';
+import { Public } from '../common/decorators/public.decorator';
 
 @ApiTags('System')
+@Public()
 @Controller('system')
 export class SystemController {
   constructor(private readonly systemService: SystemService) {}

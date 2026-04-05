@@ -1,29 +1,37 @@
-import { Controller, Get, Post, Param } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { Controller, Get, Post, Param, Body } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { ShippingService } from './shipping.service';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
+import { AddTrackingSchema } from './dto/shipping.dto';
+import type { AddTrackingDto } from './dto/shipping.dto';
 
 @ApiTags('Shipping')
+@ApiBearerAuth()
 @Controller('shipping')
 export class ShippingController {
   constructor(private readonly shippingService: ShippingService) {}
 
-  @Post('rates')
-  getRates() {
-    return { message: 'POST /shipping/rates - placeholder', status: 'not_implemented' };
+  @Get('rates/:orderId')
+  getRates(@Param('orderId') orderId: string) {
+    return this.shippingService.getRates(orderId);
   }
 
-  @Post('labels')
-  createLabel() {
-    return { message: 'POST /shipping/labels - placeholder', status: 'not_implemented' };
+  @Post('tracking')
+  addTracking(
+    @CurrentUser() userId: string,
+    @Body(new ZodValidationPipe(AddTrackingSchema)) body: AddTrackingDto,
+  ) {
+    return this.shippingService.addTracking(
+      body.orderId,
+      body.carrier,
+      body.trackingNumber,
+      userId,
+    );
   }
 
-  @Get('tracking/:trackingNumber')
-  getTracking(@Param('trackingNumber') trackingNumber: string) {
-    return { message: `GET /shipping/tracking/${trackingNumber} - placeholder`, status: 'not_implemented' };
-  }
-
-  @Get('carriers')
-  getCarriers() {
-    return { message: 'GET /shipping/carriers - placeholder', status: 'not_implemented' };
+  @Get('tracking/:orderId')
+  getTracking(@Param('orderId') orderId: string) {
+    return this.shippingService.getTracking(orderId);
   }
 }

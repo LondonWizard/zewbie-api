@@ -1,9 +1,15 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
+import { SentryModule } from '@sentry/nestjs/setup';
+import { WinstonModule } from 'nest-winston';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { ClerkAuthGuard } from './common/guards/clerk-auth.guard';
+import { RolesGuard } from './common/guards/roles.guard';
 import configuration from './config/configuration';
+import { winstonConfig } from './common/logger/winston.config';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
@@ -21,13 +27,16 @@ import { AdminModule } from './admin/admin.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { SystemModule } from './system/system.module';
+import { TrackingModule } from './tracking/tracking.module';
 
 @Module({
   imports: [
+    SentryModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,
       load: [configuration],
     }),
+    WinstonModule.forRoot(winstonConfig()),
     ThrottlerModule.forRoot({
       throttlers: [
         {
@@ -53,8 +62,14 @@ import { SystemModule } from './system/system.module';
     NotificationsModule,
     WebhooksModule,
     SystemModule,
+    TrackingModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: ClerkAuthGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
+  ],
 })
 export class AppModule {}

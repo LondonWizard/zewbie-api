@@ -1,34 +1,70 @@
-import { Controller, Get, Put, Param } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Param,
+  Body,
+  Query,
+} from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { OrdersService } from './orders.service';
+import { CurrentUser, CurrentUserRole } from '../common/decorators/current-user.decorator';
+import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
+import { CreateOrderSchema, UpdateOrderStatusSchema } from './dto/order.dto';
+import type { CreateOrderDto, UpdateOrderStatusDto } from './dto/order.dto';
+import { PaginationSchema } from '../common/dto/pagination.dto';
+import type { PaginationDto } from '../common/dto/pagination.dto';
 
 @ApiTags('Orders')
+@ApiBearerAuth()
 @Controller('orders')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
-  @Get()
-  findAll() {
-    return { message: 'GET /orders - placeholder', status: 'not_implemented' };
+  @Post()
+  create(
+    @Body(new ZodValidationPipe(CreateOrderSchema)) body: CreateOrderDto,
+  ) {
+    return this.ordersService.create(body);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return { message: `GET /orders/${id} - placeholder`, status: 'not_implemented' };
+  findOne(
+    @Param('id') id: string,
+    @CurrentUser() userId: string,
+    @CurrentUserRole() userRole: string,
+  ) {
+    return this.ordersService.findOne(id, userId, userRole);
   }
 
-  @Put(':id/cancel')
-  cancel(@Param('id') id: string) {
-    return { message: `PUT /orders/${id}/cancel - placeholder`, status: 'not_implemented' };
+  @Get('store/:storeId')
+  findByStore(
+    @Param('storeId') storeId: string,
+    @CurrentUser() userId: string,
+    @CurrentUserRole() userRole: string,
+    @Query(new ZodValidationPipe(PaginationSchema)) query: PaginationDto,
+  ) {
+    return this.ordersService.findByStore(storeId, query, userId, userRole);
   }
 
-  @Get(':id/tracking')
-  getTracking(@Param('id') id: string) {
-    return { message: `GET /orders/${id}/tracking - placeholder`, status: 'not_implemented' };
+  @Get('customer/:email')
+  findByCustomer(
+    @Param('email') email: string,
+    @CurrentUser() userId: string,
+    @CurrentUserRole() userRole: string,
+    @Query(new ZodValidationPipe(PaginationSchema)) query: PaginationDto,
+  ) {
+    return this.ordersService.findByCustomer(email, query, userId, userRole);
   }
 
-  @Get('stats')
-  getStats() {
-    return { message: 'GET /orders/stats - placeholder', status: 'not_implemented' };
+  @Put(':id/status')
+  updateStatus(
+    @Param('id') id: string,
+    @CurrentUser() userId: string,
+    @CurrentUserRole() userRole: string,
+    @Body(new ZodValidationPipe(UpdateOrderStatusSchema)) body: UpdateOrderStatusDto,
+  ) {
+    return this.ordersService.updateStatus(id, body, userId, userRole);
   }
 }

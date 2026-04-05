@@ -1,34 +1,29 @@
-import { Controller, Get, Put, Param } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import { Controller, Get, Post, Param } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { NotificationsService } from './notifications.service';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 
 @ApiTags('Notifications')
+@ApiBearerAuth()
 @Controller('notifications')
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}
 
-  @Get()
-  findAll() {
-    return { message: 'GET /notifications - placeholder', status: 'not_implemented' };
+  @Get('unread-count')
+  countUnread(@CurrentUser() userId: string) {
+    return this.notificationsService.countUnread(userId);
   }
 
-  @Put(':id/read')
-  markRead(@Param('id') id: string) {
-    return { message: `PUT /notifications/${id}/read - placeholder`, status: 'not_implemented' };
+  @Post(':id/read')
+  markRead(
+    @Param('id') id: string,
+    @CurrentUser() userId: string,
+  ) {
+    return this.notificationsService.markRead(id, userId);
   }
 
-  @Put('read-all')
-  markAllRead() {
-    return { message: 'PUT /notifications/read-all - placeholder', status: 'not_implemented' };
-  }
-
-  @Get('settings')
-  getSettings() {
-    return { message: 'GET /notifications/settings - placeholder', status: 'not_implemented' };
-  }
-
-  @Put('settings')
-  updateSettings() {
-    return { message: 'PUT /notifications/settings - placeholder', status: 'not_implemented' };
+  @Post('read-all')
+  markAllRead(@CurrentUser() userId: string) {
+    return this.notificationsService.markAllRead(userId);
   }
 }

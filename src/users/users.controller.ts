@@ -1,44 +1,74 @@
-import { Controller, Get, Put, Delete } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Put,
+  Delete,
+  Body,
+  Query,
+  UseGuards,
+  UsePipes,
+} from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { UsersService } from './users.service';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { ClerkAuthGuard } from '../common/guards/clerk-auth.guard';
+import { ZodValidationPipe } from '../common/pipes/zod-validation.pipe';
+import { UpdateUserSchema, UpdateNotificationSettingsSchema } from './dto/user.dto';
+import { PaginationSchema } from '../common/dto/pagination.dto';
 
 @ApiTags('Users')
+@ApiBearerAuth()
 @Controller('users')
+@UseGuards(ClerkAuthGuard)
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get('me')
-  getMe() {
-    return { message: 'GET /users/me - placeholder', status: 'not_implemented' };
+  getMe(@CurrentUser() userId: string) {
+    return this.usersService.findById(userId);
   }
 
   @Put('me')
-  updateMe() {
-    return { message: 'PUT /users/me - placeholder', status: 'not_implemented' };
-  }
-
-  @Put('me/password')
-  updatePassword() {
-    return { message: 'PUT /users/me/password - placeholder', status: 'not_implemented' };
+  @UsePipes(new ZodValidationPipe(UpdateUserSchema))
+  updateMe(@CurrentUser() userId: string, @Body() body: unknown) {
+    return this.usersService.update(userId, body as Record<string, unknown>);
   }
 
   @Delete('me')
-  deleteMe() {
-    return { message: 'DELETE /users/me - placeholder', status: 'not_implemented' };
+  deleteMe(@CurrentUser() userId: string) {
+    return this.usersService.softDelete(userId);
   }
 
   @Get('me/notifications')
-  getNotifications() {
-    return { message: 'GET /users/me/notifications - placeholder', status: 'not_implemented' };
+  getNotifications(
+    @CurrentUser() userId: string,
+    @Query(new ZodValidationPipe(PaginationSchema)) query: unknown,
+  ) {
+    return this.usersService.getNotifications(
+      userId,
+      query as { page: number; limit: number; sortOrder: 'asc' | 'desc' },
+    );
   }
 
   @Put('me/notifications/settings')
-  updateNotificationSettings() {
-    return { message: 'PUT /users/me/notifications/settings - placeholder', status: 'not_implemented' };
+  updateNotificationSettings(
+    @CurrentUser() userId: string,
+    @Body(new ZodValidationPipe(UpdateNotificationSettingsSchema)) body: unknown,
+  ) {
+    return this.usersService.updateNotificationSettings(
+      userId,
+      body as Record<string, boolean>,
+    );
   }
 
   @Get('me/activity')
-  getActivity() {
-    return { message: 'GET /users/me/activity - placeholder', status: 'not_implemented' };
+  getActivity(
+    @CurrentUser() userId: string,
+    @Query(new ZodValidationPipe(PaginationSchema)) query: unknown,
+  ) {
+    return this.usersService.getActivity(
+      userId,
+      query as { page: number; limit: number; sortOrder: 'asc' | 'desc' },
+    );
   }
 }
